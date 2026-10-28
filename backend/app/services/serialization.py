@@ -41,6 +41,7 @@ def transaction_response(db: Session, transaction: Transaction, viewer: User) ->
         signed = -transaction.amount_paise if viewer_is_sender else transaction.amount_paise
         method = "SecurePay simulated transfer"
     return TransactionResponse(
+        id=transaction.id,
         reference=transaction.reference,
         transaction_type=transaction.transaction_type,
         amount_paise=transaction.amount_paise,

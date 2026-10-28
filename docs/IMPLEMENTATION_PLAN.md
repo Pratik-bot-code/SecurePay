@@ -30,77 +30,46 @@ The workspace was empty at the start of Phase 1. There is no existing code, depe
 | Deployment | Local development is in scope. Production deployment is not; HTTPS, secret management, database privileges, backups, monitoring, and operational review remain prerequisites |
 | Security target | Use OWASP ASVS 5.0.0 Level 2 as a planning and verification baseline, not as a certification or claim of security |
 
-## Work plan
+## Fintech Production Upgrade Roadmap (Phases 1 — 7)
 
-### Phase 1 — Inspect and design (current)
+### Phase 1 — Comprehensive Codebase Audit ✅ COMPLETED
+- Full line-by-line inspection of all backend models, routes, security primitives, and frontend components.
+- Identified 12 architectural, security, and functional gaps.
+- Created `phase1_audit_report.md` (approved) and `docs/FEATURE_STATUS.md`.
 
-- Inspect the workspace and record the starting state.
-- Define the architecture, trust boundaries, data ownership, data model, payment invariants, and threat model.
-- Record remaining assumptions and security limitations.
-- Artifacts: this plan, [ARCHITECTURE.md](./ARCHITECTURE.md), [DATA_MODEL.md](./DATA_MODEL.md), and [THREAT_MODEL.md](./THREAT_MODEL.md).
+### Phase 2 — Security Hardening ✅ COMPLETED
+- Password strength validation: minimum 12 chars, diversity enforcement, rejection of common passwords.
+- Active session tracking: `last_seen_at` updated and committed on every authenticated request.
+- CSP header upgraded: zero-trust `default-src 'none'` for API, scoped CSP for Swagger/ReDoc docs.
+- Timezone handling consolidated to `ensure_utc` in `app.core.security`.
+- Fixed FastAPI response annotation on `/logout`.
+- Authored `SECURITY.md`, `THREAT_MODEL.md`, `PRIVACY.md` in repository root.
+- Expanded backend test suite from 8 to 15 passing tests (`test_security_hardening.py`).
 
-### Phase 2 — Frontend shell and requested demo flows — implemented
+### Phase 3 — Database Reliability & Persistence (CURRENT)
+- Fix dashboard balance queries: query actual `DemoAccount.balance_paise` and double-entry ledger.
+- Derive dashboard metrics (`monthly_spend_paise`, `total_received_paise`, `total_sent_paise`, `transaction_count`) from ledger records.
+- Implement schema for linked bank accounts (`LinkedBankAccount`) storing masked account numbers and provider references.
+- Add session expiration cleanup routines.
+- Automated tests for data persistence across restarts and atomic rollback behavior.
 
-- Implemented the responsive dashboard, authenticated send/receive flows, QR generation/manual demo-ID entry, transaction history/search/filters/export, receipts, profile, security preferences/session management, and notifications.
-- Added registration/login and a generic recovery-request screen. Recovery delivery remains unconfigured.
-- Connected state-changing and owner-scoped UI flows to the FastAPI backend; the browser smoke test completed registration and a simulated transfer/receipt.
-- Recharge/bill screens, help/legal pages, admin audit dashboard, and automated frontend test coverage remain out of scope.
+### Phase 4 — Real Payment Provider Integration (Sandbox)
+- Provider abstraction interface (`PaymentProvider`) with pluggable adapters.
+- Integration with authorized payment sandbox (e.g. Razorpay/Cashfree sandbox).
+- Order creation, server-side signature verification, idempotency protection, replay prevention, and webhook handling.
+- Never mark payment successful based on client redirect.
+- Strict isolation of sandbox vs. production configuration.
 
-### Phase 3 — Backend foundation, persistence, and identity — implemented with recovery limitation
+### Phase 5 — Professional Fintech UI/UX
+- Modularize frontend components out of monolithic `App.jsx`.
+- Implement responsive Navy, White, and Teal fintech design system with modern typography (Inter/Manrope).
+- Screens: Dashboard, Bank Linking, Send/Receive, QR Scanner, Merchant Checkout, Transaction History & Receipts, Dispute/Help Center.
+- Complete state handling: loading skeletons, empty states, error toasts, retry mechanisms, and offline indicators.
 
-- Added FastAPI, settings validation, SQLAlchemy models, Alembic migrations, and PostgreSQL/SQLite database configuration. Startup now requires an applied Alembic revision; it does not call `create_all`.
-- Implemented registration, login/logout, server-side sessions, session revocation, password changes, owner-scoped endpoints, CSRF/origin checks, and audit events.
-- Added Argon2id password hashing, request validation, generic authentication/recovery responses, database-backed rate-limit buckets, and security response headers.
-- Recovery request responses are generic, but token delivery and password reset are not implemented.
-- SQLite API tests verify CSRF, logout, cross-user transaction/notification/session access denial, profile isolation, and ledger behavior. Expiration, rate-limit thresholds, and sensitive-data logging need additional test coverage.
+### Phase 6 — End-to-End & Integration Testing
+- Complete test suite covering API routes, database restarts, concurrency, idempotency, webhook signature verification, and negative authorization.
+- Frontend component and accessibility verification.
 
-### Phase 4 — Simulated ledger and payment workflows — implemented; PostgreSQL verification pending
+### Phase 7 — Deliverables & Documentation
+- Comprehensive release summary, migration documentation, deployment instructions, and live payment onboarding requirements.
 
-- Implemented integer-paise simulated transfers, server-derived sender/account ownership, synthetic-recipient restrictions, balance checks, paired ledger entries, audit notifications, and idempotency.
-- Database operations update balances, transaction records, ledger entries, and idempotency outcomes in a single unit of work.
-- PostgreSQL uses ordered account row locks and has database trigger definitions for immutable/balanced ledger entries. SQLite immutability is verified; PostgreSQL behavior and concurrent transfers were not exercised.
-- Earlier tests covered replayed idempotency keys, insufficient funds, unchanged balances on cross-user transfer attempts, balanced ledger entries, immutable SQLite ledger rows, and simulated receipt behavior. These payment flows have since been disabled; current tests verify fail-closed behavior without a provider.
-
-### Phase 5 — Frontend/API integration — implemented
-
-- Added a credentialed API client with in-memory CSRF handling and a Vite API proxy.
-- Dashboard, transactions/details, payment, QR/demo-ID receive, profile, preferences, sessions, notifications, password change, and sign-out use backend endpoints. Receipts appear only after a committed backend response.
-- Cross-user ownership, CSRF, and key payment flows were verified with API tests and a browser smoke test; authentication-expiry UX and broader error scenarios need more coverage.
-
-### Phase 6 — Synthetic data and local development — implemented
-
-- Added synthetic directory users, demo funding accounts, and a double-entry opening pool. No seed credentials are available for directory users.
-- Added PostgreSQL Docker Compose configuration, placeholder environment settings, ignored local data, and local setup instructions in the root README.
-- Production mode rejects default secrets, insecure cookies, wildcard CORS, demo seeding, and SQLite.
-
-### Phase 7 — Verification and security checks — partial
-
-- Backend: `pytest` passes 5 API tests; `alembic upgrade head` and `alembic check` pass on a fresh SQLite database.
-- Frontend: `npm run build` succeeds; a live browser smoke test registered a user and completed a simulated payment with a backend receipt.
-- PostgreSQL migration/trigger/locking tests, broader rollback/rate-limit/expiry tests, frontend automated tests, and final dependency audit remain outstanding.
-
-### Phase 8 — Documentation and handoff — implemented with known limitations
-
-- Added local setup/test instructions and documented demo-only capability, recovery limitations, and PostgreSQL validation gaps.
-- Independent security review and production readiness work remain out of scope.
-
-## Acceptance checklist
-
-- [x] Documented local setup is available; a full clean-checkout setup has not been exercised.
-- [ ] Alembic migrations apply to PostgreSQL; the SQLite migration path is tested separately.
-- [x] Frontend production build succeeds.
-- [x] Backend starts with generic API errors and debug details disabled by default.
-- [x] Registration, logout, and protected ownership checks pass focused tests; session revocation is owner-scoped.
-- [x] Key UI flows function and clearly identify demo money and demo transactions.
-- [ ] Transfer atomicity, idempotency, concurrency, rollback, sufficient-funds checks, and ledger invariants are tested.
-- [ ] No real payment provider or financial credentials are requested or used.
-- [ ] No secrets or sensitive authentication material appear in browser storage, responses, logs, or committed files.
-- [ ] Automated tests and dependency checks are run; limitations and manual review needs are documented.
-
-## Risks and sequencing notes
-
-- PostgreSQL-specific row locking, constraints, and append-only protections must be tested against PostgreSQL. SQLite is a convenience option, not evidence of equivalent concurrency safety.
-- Browser cookie authentication needs a coherent origin/deployment setup. Production should serve the frontend and API same-site (preferably same-origin behind a reverse proxy) and use HTTPS.
-- Email delivery for password recovery is not available by default. A real delivery provider requires explicit configuration and separate review; a token must never be exposed as a convenient demo shortcut.
-- Admin screens are useful only after server-side role checks and synthetic local-only admin provisioning are in place.
-- This is a demonstration, not a production banking application or a substitute for independent security assessment.

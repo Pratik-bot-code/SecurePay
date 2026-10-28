@@ -1,0 +1,16 @@
+{
+  "appId": "com.securepay.app",
+  "appName": "SecurePay",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0A192F"
+    }
+  }
+}

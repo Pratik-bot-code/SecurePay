@@ -209,3 +209,90 @@ class PasswordResetRequest(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class LinkedBankAccount(Base):
+    __tablename__ = "linked_bank_accounts"
+    __table_args__ = (
+        CheckConstraint("account_type IN ('savings', 'current')", name="ck_linked_accounts_type"),
+        CheckConstraint("verification_status IN ('verified', 'pending', 'failed')", name="ck_linked_accounts_status"),
+        Index("ix_linked_accounts_user", "user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    bank_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    account_holder_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    masked_account_number: Mapped[str] = mapped_column(String(24), nullable=False)
+    ifsc_code: Mapped[str] = mapped_column(String(11), nullable=False)
+    account_type: Mapped[str] = mapped_column(String(20), nullable=False, default="savings")
+    provider_account_reference: Mapped[str | None] = mapped_column(String(100))
+    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    verification_status: Mapped[str] = mapped_column(String(20), nullable=False, default="verified")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class Merchant(Base):
+    __tablename__ = "merchants"
+    __table_args__ = (
+        CheckConstraint("status IN ('active', 'disabled')", name="ck_merchants_status"),
+        Index("ix_merchants_user", "user_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    business_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    merchant_code: Mapped[str] = mapped_column(String(32), nullable=False, unique=True, index=True)
+    category: Mapped[str] = mapped_column(String(60), nullable=False, default="General Merchant")
+    upi_handle: Mapped[str] = mapped_column(String(60), nullable=False, unique=True, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now)
+
+
+class PaymentOrder(Base):
+    __tablename__ = "payment_orders"
+    __table_args__ = (
+        CheckConstraint("amount_paise > 0", name="ck_payment_orders_amount_positive"),
+        CheckConstraint("status IN ('created', 'attempted', 'paid', 'failed', 'refunded')", name="ck_payment_orders_status"),
+        CheckConstraint("currency = 'INR'", name="ck_payment_orders_currency"),
+        Index("ix_payment_orders_user", "user_id"),
+        Index("ix_payment_orders_provider_order", "provider_order_id"),
+        Index("ix_payment_orders_provider_payment", "provider_payment_id"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    merchant_id: Mapped[str | None] = mapped_column(Uuid(as_uuid=False), ForeignKey("merchants.id", ondelete="SET NULL"))
+    order_reference: Mapped[str] = mapped_column(String(36), nullable=False, unique=True, index=True)
+    provider_name: Mapped[str] = mapped_column(String(32), nullable=False, default="sandbox")
+    provider_order_id: Mapped[str | None] = mapped_column(String(100))
+    provider_payment_id: Mapped[str | None] = mapped_column(String(100))
+    amount_paise: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="INR")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="created")
+    order_type: Mapped[str] = mapped_column(String(24), nullable=False, default="payment")
+    idempotency_key: Mapped[str | None] = mapped_column(String(100), index=True)
+    notes: Mapped[str | None] = mapped_column(Text)
+    receipt_number: Mapped[str | None] = mapped_column(String(60))
+    recipient_identifier: Mapped[str | None] = mapped_column(String(100))
+    recipient_type: Mapped[str | None] = mapped_column(String(20))
+    recipient_display_name: Mapped[str | None] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PaymentStatusHistory(Base):
+    __tablename__ = "payment_status_history"
+    __table_args__ = (
+        Index("ix_payment_status_history_order_created", "payment_order_id", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True, default=new_id)
+    payment_order_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("payment_orders.id", ondelete="CASCADE"), nullable=False)
+    old_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    new_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utc_now)
+

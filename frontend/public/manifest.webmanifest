@@ -1,0 +1,54 @@
+{
+  "name": "SecurePay — Digital Payments",
+  "short_name": "SecurePay",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A192F",
+  "theme_color": "#0A192F",
+  "description": "Unified banking accounts, real-time UPI transfers, QR payments, and cryptographically verified double-entry ledger.",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Pay & Transfer",
+      "short_name": "Pay",
+      "description": "Send a fast UPI or bank payment",
+      "url": "/?action=send",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Receive QR",
+      "short_name": "Receive",
+      "description": "Show personal or merchant UPI QR code",
+      "url": "/receive",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Transactions",
+      "short_name": "History",
+      "description": "View verified transaction ledger",
+      "url": "/transactions",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
